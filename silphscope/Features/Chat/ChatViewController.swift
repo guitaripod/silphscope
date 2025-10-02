@@ -1,0 +1,466 @@
+import UIKit
+import Combine
+import Swollama
+
+final class ChatViewController: UIViewController {
+
+    private let viewModel = ChatViewModel()
+    private var cancellables = Set<AnyCancellable>()
+    private var dataSource: UICollectionViewDiffableDataSource<Int, ChatViewModel.Message>!
+
+    private lazy var collectionView: UICollectionView = {
+        let layout = createLayout()
+        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        cv.setupForAutoLayout()
+        cv.backgroundColor = .systemBackground
+        cv.keyboardDismissMode = .interactive
+        cv.contentInsetAdjustmentBehavior = .automatic
+        cv.alwaysBounceVertical = true
+        cv.register(StreamingMessageCell.self, forCellWithReuseIdentifier: StreamingMessageCell.identifier)
+        return cv
+    }()
+
+    private lazy var inputContainer: UIView = {
+        let view = UIView()
+        view.setupForAutoLayout()
+        view.backgroundColor = .systemBackground
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOffset = CGSize(width: 0, height: -1)
+        view.layer.shadowOpacity = 0.1
+        view.layer.shadowRadius = 4
+        return view
+    }()
+
+    private lazy var inputStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.setupForAutoLayout()
+        stack.axis = .horizontal
+        stack.spacing = 8
+        stack.alignment = .bottom
+        stack.distribution = .fill
+        return stack
+    }()
+
+    private lazy var textView: UITextView = {
+        let tv = UITextView()
+        tv.setupForAutoLayout()
+        tv.font = .systemFont(ofSize: 16)
+        tv.backgroundColor = .secondarySystemBackground
+        tv.layer.cornerRadius = 20
+        tv.layer.cornerCurve = .continuous
+        tv.textContainerInset = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+        tv.isScrollEnabled = false
+        tv.returnKeyType = .send
+        tv.delegate = self
+        tv.inputAccessoryView = nil
+        return tv
+    }()
+
+    private lazy var sendButton: UIButton = {
+        let btn = UIButton(type: .system)
+        btn.setupForAutoLayout()
+        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
+        btn.setImage(UIImage(systemName: "arrow.up.circle.fill", withConfiguration: config), for: .normal)
+        btn.tintColor = .systemBlue
+        btn.addTarget(self, action: #selector(sendTapped), for: .touchUpInside)
+        btn.isEnabled = false
+        btn.alpha = 0.5
+        return btn
+    }()
+
+    private lazy var cancelButton: UIButton = {
+        let btn = UIButton(type: .system)
+        btn.setupForAutoLayout()
+        btn.setTitle("Cancel", for: .normal)
+        btn.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
+        btn.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
+        return btn
+    }()
+
+    private var inputContainerBottomConstraint: NSLayoutConstraint!
+    private var textViewHeightConstraint: NSLayoutConstraint!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupUI()
+        setupConstraints()
+        setupDataSource()
+        bindViewModel()
+        setupNavigationBar()
+        setupKeyboardObservers()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        textView.becomeFirstResponder()
+    }
+
+    private func setupUI() {
+        view.backgroundColor = .systemBackground
+        view.addSubview(collectionView)
+        view.addSubview(inputContainer)
+        inputContainer.addSubview(inputStackView)
+        inputStackView.addArrangedSubview(textView)
+        inputStackView.addArrangedSubview(sendButton)
+        inputStackView.addArrangedSubview(cancelButton)
+        cancelButton.isHidden = true
+    }
+
+    private func setupConstraints() {
+        textViewHeightConstraint = textView.heightAnchor.constraint(equalToConstant: 40)
+        inputContainerBottomConstraint = inputContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+
+        NSLayoutConstraint.activate([
+            collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: inputContainer.topAnchor),
+
+            inputContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            inputContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            inputContainerBottomConstraint,
+
+            inputStackView.topAnchor.constraint(equalTo: inputContainer.topAnchor, constant: 8),
+            inputStackView.leadingAnchor.constraint(equalTo: inputContainer.leadingAnchor, constant: 16),
+            inputStackView.trailingAnchor.constraint(equalTo: inputContainer.trailingAnchor, constant: -16),
+            inputStackView.bottomAnchor.constraint(equalTo: inputContainer.bottomAnchor, constant: -8),
+
+            textViewHeightConstraint,
+            textView.widthAnchor.constraint(equalTo: inputStackView.widthAnchor, constant: -48),
+
+            sendButton.widthAnchor.constraint(equalToConstant: 36),
+            sendButton.heightAnchor.constraint(equalToConstant: 36),
+
+            cancelButton.heightAnchor.constraint(equalToConstant: 36)
+        ])
+    }
+
+    private func setupDataSource() {
+        dataSource = UICollectionViewDiffableDataSource<Int, ChatViewModel.Message>(
+            collectionView: collectionView
+        ) { collectionView, indexPath, message in
+            let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: StreamingMessageCell.identifier,
+                for: indexPath
+            ) as! StreamingMessageCell
+            cell.configure(with: message)
+            return cell
+        }
+    }
+
+    private func bindViewModel() {
+        viewModel.$messages
+            .receive(on: RunLoop.main)
+            .sink { [weak self] messages in
+                self?.updateSnapshot(with: messages, animated: true)
+            }
+            .store(in: &cancellables)
+
+        viewModel.$isGenerating
+            .receive(on: RunLoop.main)
+            .sink { [weak self] isGenerating in
+                self?.handleGeneratingStateChange(isGenerating)
+            }
+            .store(in: &cancellables)
+
+        viewModel.$error
+            .compactMap { $0 }
+            .receive(on: RunLoop.main)
+            .sink { [weak self] error in
+                self?.showError(error)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func updateSnapshot(with messages: [ChatViewModel.Message], animated: Bool) {
+        let isStreaming = messages.last?.isStreaming ?? false
+
+        var snapshot = NSDiffableDataSourceSnapshot<Int, ChatViewModel.Message>()
+        snapshot.appendSections([0])
+        snapshot.appendItems(messages)
+
+        if isStreaming && !messages.isEmpty {
+            snapshot.reconfigureItems([messages.last!])
+        }
+
+        dataSource.apply(snapshot, animatingDifferences: animated && !isStreaming) { [weak self] in
+            guard let self = self, !messages.isEmpty else { return }
+
+            if isStreaming {
+                self.maintainBottomScroll()
+            } else {
+                DispatchQueue.main.async {
+                    let lastIndexPath = IndexPath(item: messages.count - 1, section: 0)
+                    self.collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: animated)
+                }
+            }
+        }
+    }
+
+    private func maintainBottomScroll() {
+        let contentHeight = collectionView.contentSize.height
+        let frameHeight = collectionView.frame.height
+
+        guard contentHeight > frameHeight else { return }
+
+        let bottomOffset = max(0, contentHeight - frameHeight)
+
+        UIView.performWithoutAnimation {
+            self.collectionView.contentOffset = CGPoint(x: 0, y: bottomOffset)
+        }
+    }
+
+    private func createLayout() -> UICollectionViewLayout {
+        let itemSize = NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .estimated(100)
+        )
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+
+        let groupSize = NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .estimated(100)
+        )
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+
+        let section = NSCollectionLayoutSection(group: group)
+        section.interGroupSpacing = 4
+        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0)
+
+        return UICollectionViewCompositionalLayout(section: section)
+    }
+
+    private func setupNavigationBar() {
+        title = "Chat"
+        navigationItem.largeTitleDisplayMode = .never
+
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            image: UIImage(systemName: "trash"),
+            style: .plain,
+            target: self,
+            action: #selector(clearChat)
+        )
+    }
+
+    private func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillChangeFrame),
+            name: UIResponder.keyboardWillChangeFrameNotification,
+            object: nil
+        )
+    }
+
+    @objc private func sendTapped() {
+        let text = textView.text ?? ""
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        textView.text = ""
+        updateTextViewHeight()
+        updateSendButtonState()
+
+        Task {
+            await viewModel.sendMessage(text)
+        }
+    }
+
+    @objc private func cancelTapped() {
+        viewModel.cancelGeneration()
+    }
+
+    @objc private func clearChat() {
+        let alert = UIAlertController(
+            title: "Clear Chat",
+            message: "Clear all messages?",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Clear", style: .destructive) { [weak self] _ in
+            self?.viewModel.clearMessages()
+        })
+
+        present(alert, animated: true)
+    }
+
+    @objc private func keyboardWillChangeFrame(_ notification: Notification) {
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
+              let curveValue = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? Int,
+              let curve = UIView.AnimationCurve(rawValue: curveValue) else { return }
+
+        let keyboardHeight = keyboardFrame.origin.y >= UIScreen.main.bounds.height ? 0 : keyboardFrame.height
+
+        inputContainerBottomConstraint.constant = -keyboardHeight
+
+        let animator = UIViewPropertyAnimator(duration: duration, curve: curve) {
+            self.view.layoutIfNeeded()
+        }
+
+        animator.startAnimation()
+    }
+
+
+    private func updateTextViewHeight() {
+        let maxHeight: CGFloat = 120
+        let contentHeight = textView.sizeThatFits(CGSize(width: textView.frame.width, height: .greatestFiniteMagnitude)).height
+        textViewHeightConstraint.constant = min(contentHeight, maxHeight)
+        textView.isScrollEnabled = contentHeight > maxHeight
+    }
+
+    private func updateSendButtonState() {
+        let hasText = !(textView.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        sendButton.isEnabled = hasText
+
+        UIView.animate(withDuration: 0.2) {
+            self.sendButton.alpha = hasText ? 1.0 : 0.5
+            self.sendButton.transform = hasText ? .identity : CGAffineTransform(scaleX: 0.9, y: 0.9)
+        }
+    }
+
+    private func showError(_ message: String) {
+        let alert = UIAlertController(title: "Error", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+
+    private func handleGeneratingStateChange(_ isGenerating: Bool) {
+        sendButton.isHidden = isGenerating
+        cancelButton.isHidden = !isGenerating
+        textView.isEditable = !isGenerating
+    }
+}
+
+extension ChatViewController: UITextViewDelegate {
+    func textViewDidChange(_ textView: UITextView) {
+        updateTextViewHeight()
+        updateSendButtonState()
+    }
+
+    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        if text == "\n" && textView.returnKeyType == .send {
+            sendTapped()
+            return false
+        }
+        return true
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        return index >= 0 && index < count ? self[index] : nil
+    }
+}
+
+final class StreamingMessageCell: UICollectionViewCell {
+
+    static let identifier = "StreamingMessageCell"
+
+    private let bubbleView: UIView = {
+        let view = UIView()
+        view.setupForAutoLayout()
+        view.layer.cornerRadius = 18
+        view.layer.cornerCurve = .continuous
+        return view
+    }()
+
+    private let textLabel: UILabel = {
+        let label = UILabel()
+        label.setupForAutoLayout()
+        label.numberOfLines = 0
+        label.font = .systemFont(ofSize: 16)
+        return label
+    }()
+
+    private var bubbleLeadingConstraint: NSLayoutConstraint!
+    private var bubbleTrailingConstraint: NSLayoutConstraint!
+    private var bubbleLeadingUserConstraint: NSLayoutConstraint!
+    private var bubbleTrailingUserConstraint: NSLayoutConstraint!
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupUI()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func setupUI() {
+        contentView.addSubview(bubbleView)
+        bubbleView.addSubview(textLabel)
+
+        bubbleLeadingConstraint = bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16)
+        bubbleTrailingConstraint = bubbleView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -60)
+        bubbleLeadingUserConstraint = bubbleView.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 60)
+        bubbleTrailingUserConstraint = bubbleView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
+
+        NSLayoutConstraint.activate([
+            textLabel.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 10),
+            textLabel.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
+            textLabel.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
+            textLabel.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -10),
+
+            bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 2),
+            bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -2),
+            bubbleView.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
+            bubbleView.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, multiplier: 0.75)
+        ])
+
+        bubbleLeadingConstraint.isActive = true
+        bubbleTrailingConstraint.isActive = true
+    }
+
+    func configure(with message: ChatViewModel.Message) {
+        let isUser = message.role == .user
+
+        NSLayoutConstraint.deactivate([
+            bubbleLeadingConstraint,
+            bubbleTrailingConstraint,
+            bubbleLeadingUserConstraint,
+            bubbleTrailingUserConstraint
+        ])
+
+        if isUser {
+            bubbleView.backgroundColor = .systemBlue
+            textLabel.textColor = .white
+            NSLayoutConstraint.activate([bubbleLeadingUserConstraint, bubbleTrailingUserConstraint])
+        } else {
+            bubbleView.backgroundColor = .secondarySystemBackground
+            textLabel.textColor = .label
+            NSLayoutConstraint.activate([bubbleLeadingConstraint, bubbleTrailingConstraint])
+        }
+
+        let oldText = textLabel.text ?? ""
+        let newText: String
+
+        if message.content.isEmpty && message.isStreaming {
+            newText = "Thinking..."
+            textLabel.alpha = 0.6
+        } else {
+            newText = message.content.isEmpty ? " " : message.content
+            textLabel.alpha = 1.0
+        }
+
+        if oldText.count < newText.count && message.isStreaming && !isUser {
+            textLabel.text = newText
+            let transition = CATransition()
+            transition.type = .fade
+            transition.duration = 0.15
+            textLabel.layer.add(transition, forKey: "textChange")
+        } else {
+            textLabel.text = newText
+        }
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        textLabel.text = nil
+        textLabel.alpha = 1.0
+        bubbleLeadingConstraint.isActive = false
+        bubbleTrailingConstraint.isActive = false
+        bubbleLeadingUserConstraint.isActive = false
+        bubbleTrailingUserConstraint.isActive = false
+    }
+}
+
