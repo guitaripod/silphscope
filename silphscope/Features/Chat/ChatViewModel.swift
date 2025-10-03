@@ -1,5 +1,6 @@
 import Foundation
 import Swollama
+
 @MainActor
 final class ChatViewModel: ObservableObject {
 
@@ -98,12 +99,18 @@ final class ChatViewModel: ObservableObject {
 
             for try await response in stream {
                 if Task.isCancelled {
-                    AppLogger.shared.debug("Stream cancelled at \(streamBuffer.count) chars", category: .ollama)
+                    AppLogger.shared.debug(
+                        "Stream cancelled at \(streamBuffer.count) chars",
+                        category: .ollama
+                    )
                     break
                 }
 
                 if response.done {
-                    AppLogger.shared.info("✅ Chat completed: \(streamBuffer.count) chars", category: .ollama)
+                    AppLogger.shared.info(
+                        "✅ Chat completed: \(streamBuffer.count) chars",
+                        category: .ollama
+                    )
                     if !chunkBuffer.isEmpty {
                         flushChunkBuffer()
                     }
@@ -120,9 +127,9 @@ final class ChatViewModel: ObservableObject {
                         chunkBuffer.append(chunk)
 
                         let bufferedText = chunkBuffer.joined()
-                        let shouldUpdate = chunkBuffer.count >= 4 ||
-                                          bufferedText.contains("\n") ||
-                                          bufferedText.count > 40
+                        let shouldUpdate =
+                            chunkBuffer.count >= 4 || bufferedText.contains("\n")
+                            || bufferedText.count > 40
 
                         if shouldUpdate {
                             flushChunkBuffer()
@@ -152,8 +159,9 @@ final class ChatViewModel: ObservableObject {
 
     private func flushChunkBuffer() {
         guard !chunkBuffer.isEmpty,
-              let index = streamingMessageIndex,
-              index < messages.count else { return }
+            let index = streamingMessageIndex,
+            index < messages.count
+        else { return }
 
         let newContent = chunkBuffer.joined()
         streamBuffer += newContent

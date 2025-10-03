@@ -1,6 +1,6 @@
-import UIKit
 import Combine
 import Swollama
+import UIKit
 
 final class ChatViewController: UIViewController {
 
@@ -16,7 +16,10 @@ final class ChatViewController: UIViewController {
         cv.keyboardDismissMode = .interactive
         cv.contentInsetAdjustmentBehavior = .automatic
         cv.alwaysBounceVertical = true
-        cv.register(StreamingMessageCell.self, forCellWithReuseIdentifier: StreamingMessageCell.identifier)
+        cv.register(
+            StreamingMessageCell.self,
+            forCellWithReuseIdentifier: StreamingMessageCell.identifier
+        )
         return cv
     }()
 
@@ -60,7 +63,10 @@ final class ChatViewController: UIViewController {
         let btn = UIButton(type: .system)
         btn.setupForAutoLayout()
         let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
-        btn.setImage(UIImage(systemName: "arrow.up.circle.fill", withConfiguration: config), for: .normal)
+        btn.setImage(
+            UIImage(systemName: "arrow.up.circle.fill", withConfiguration: config),
+            for: .normal
+        )
         btn.tintColor = .systemBlue
         btn.addTarget(self, action: #selector(sendTapped), for: .touchUpInside)
         btn.isEnabled = false
@@ -108,7 +114,9 @@ final class ChatViewController: UIViewController {
 
     private func setupConstraints() {
         textViewHeightConstraint = textView.heightAnchor.constraint(equalToConstant: 40)
-        inputContainerBottomConstraint = inputContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        inputContainerBottomConstraint = inputContainer.bottomAnchor.constraint(
+            equalTo: view.safeAreaLayoutGuide.bottomAnchor
+        )
 
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -121,9 +129,18 @@ final class ChatViewController: UIViewController {
             inputContainerBottomConstraint,
 
             inputStackView.topAnchor.constraint(equalTo: inputContainer.topAnchor, constant: 8),
-            inputStackView.leadingAnchor.constraint(equalTo: inputContainer.leadingAnchor, constant: 16),
-            inputStackView.trailingAnchor.constraint(equalTo: inputContainer.trailingAnchor, constant: -16),
-            inputStackView.bottomAnchor.constraint(equalTo: inputContainer.bottomAnchor, constant: -8),
+            inputStackView.leadingAnchor.constraint(
+                equalTo: inputContainer.leadingAnchor,
+                constant: 16
+            ),
+            inputStackView.trailingAnchor.constraint(
+                equalTo: inputContainer.trailingAnchor,
+                constant: -16
+            ),
+            inputStackView.bottomAnchor.constraint(
+                equalTo: inputContainer.bottomAnchor,
+                constant: -8
+            ),
 
             textViewHeightConstraint,
             textView.widthAnchor.constraint(equalTo: inputStackView.widthAnchor, constant: -48),
@@ -131,7 +148,7 @@ final class ChatViewController: UIViewController {
             sendButton.widthAnchor.constraint(equalToConstant: 36),
             sendButton.heightAnchor.constraint(equalToConstant: 36),
 
-            cancelButton.heightAnchor.constraint(equalToConstant: 36)
+            cancelButton.heightAnchor.constraint(equalToConstant: 36),
         ])
     }
 
@@ -139,10 +156,11 @@ final class ChatViewController: UIViewController {
         dataSource = UICollectionViewDiffableDataSource<Int, ChatViewModel.Message>(
             collectionView: collectionView
         ) { collectionView, indexPath, message in
-            let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: StreamingMessageCell.identifier,
-                for: indexPath
-            ) as! StreamingMessageCell
+            let cell =
+                collectionView.dequeueReusableCell(
+                    withReuseIdentifier: StreamingMessageCell.identifier,
+                    for: indexPath
+                ) as! StreamingMessageCell
             cell.configure(with: message)
             return cell
         }
@@ -191,7 +209,11 @@ final class ChatViewController: UIViewController {
             } else {
                 DispatchQueue.main.async {
                     let lastIndexPath = IndexPath(item: messages.count - 1, section: 0)
-                    self.collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: animated)
+                    self.collectionView.scrollToItem(
+                        at: lastIndexPath,
+                        at: .bottom,
+                        animated: animated
+                    )
                 }
             }
         }
@@ -276,20 +298,28 @@ final class ChatViewController: UIViewController {
         )
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Clear", style: .destructive) { [weak self] _ in
-            self?.viewModel.clearMessages()
-        })
+        alert.addAction(
+            UIAlertAction(title: "Clear", style: .destructive) { [weak self] _ in
+                self?.viewModel.clearMessages()
+            }
+        )
 
         present(alert, animated: true)
     }
 
     @objc private func keyboardWillChangeFrame(_ notification: Notification) {
-        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
-              let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
-              let curveValue = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? Int,
-              let curve = UIView.AnimationCurve(rawValue: curveValue) else { return }
+        guard
+            let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey]
+                as? CGRect,
+            let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey]
+                as? Double,
+            let curveValue = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey]
+                as? Int,
+            let curve = UIView.AnimationCurve(rawValue: curveValue)
+        else { return }
 
-        let keyboardHeight = keyboardFrame.origin.y >= UIScreen.main.bounds.height ? 0 : keyboardFrame.height
+        let keyboardHeight =
+            keyboardFrame.origin.y >= UIScreen.main.bounds.height ? 0 : keyboardFrame.height
 
         inputContainerBottomConstraint.constant = -keyboardHeight
 
@@ -300,16 +330,18 @@ final class ChatViewController: UIViewController {
         animator.startAnimation()
     }
 
-
     private func updateTextViewHeight() {
         let maxHeight: CGFloat = 120
-        let contentHeight = textView.sizeThatFits(CGSize(width: textView.frame.width, height: .greatestFiniteMagnitude)).height
+        let contentHeight = textView.sizeThatFits(
+            CGSize(width: textView.frame.width, height: .greatestFiniteMagnitude)
+        ).height
         textViewHeightConstraint.constant = min(contentHeight, maxHeight)
         textView.isScrollEnabled = contentHeight > maxHeight
     }
 
     private func updateSendButtonState() {
-        let hasText = !(textView.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        let hasText =
+            !(textView.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         sendButton.isEnabled = hasText
 
         UIView.animate(withDuration: 0.2) {
@@ -337,7 +369,11 @@ extension ChatViewController: UITextViewDelegate {
         updateSendButtonState()
     }
 
-    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+    func textView(
+        _ textView: UITextView,
+        shouldChangeTextIn range: NSRange,
+        replacementText text: String
+    ) -> Bool {
         if text == "\n" && textView.returnKeyType == .send {
             sendTapped()
             return false
@@ -346,8 +382,8 @@ extension ChatViewController: UITextViewDelegate {
     }
 }
 
-private extension Array {
-    subscript(safe index: Int) -> Element? {
+extension Array {
+    fileprivate subscript(safe index: Int) -> Element? {
         return index >= 0 && index < count ? self[index] : nil
     }
 }
@@ -390,10 +426,22 @@ final class StreamingMessageCell: UICollectionViewCell {
         contentView.addSubview(bubbleView)
         bubbleView.addSubview(textLabel)
 
-        bubbleLeadingConstraint = bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16)
-        bubbleTrailingConstraint = bubbleView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -60)
-        bubbleLeadingUserConstraint = bubbleView.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 60)
-        bubbleTrailingUserConstraint = bubbleView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
+        bubbleLeadingConstraint = bubbleView.leadingAnchor.constraint(
+            equalTo: contentView.leadingAnchor,
+            constant: 16
+        )
+        bubbleTrailingConstraint = bubbleView.trailingAnchor.constraint(
+            lessThanOrEqualTo: contentView.trailingAnchor,
+            constant: -60
+        )
+        bubbleLeadingUserConstraint = bubbleView.leadingAnchor.constraint(
+            greaterThanOrEqualTo: contentView.leadingAnchor,
+            constant: 60
+        )
+        bubbleTrailingUserConstraint = bubbleView.trailingAnchor.constraint(
+            equalTo: contentView.trailingAnchor,
+            constant: -16
+        )
 
         NSLayoutConstraint.activate([
             textLabel.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 10),
@@ -404,7 +452,10 @@ final class StreamingMessageCell: UICollectionViewCell {
             bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 2),
             bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -2),
             bubbleView.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
-            bubbleView.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, multiplier: 0.75)
+            bubbleView.widthAnchor.constraint(
+                lessThanOrEqualTo: contentView.widthAnchor,
+                multiplier: 0.75
+            ),
         ])
 
         bubbleLeadingConstraint.isActive = true
@@ -418,7 +469,7 @@ final class StreamingMessageCell: UICollectionViewCell {
             bubbleLeadingConstraint,
             bubbleTrailingConstraint,
             bubbleLeadingUserConstraint,
-            bubbleTrailingUserConstraint
+            bubbleTrailingUserConstraint,
         ])
 
         if isUser {
@@ -463,4 +514,3 @@ final class StreamingMessageCell: UICollectionViewCell {
         bubbleTrailingUserConstraint.isActive = false
     }
 }
-

@@ -9,7 +9,7 @@ final class OllamaService {
     private let baseURL: URL
 
     private init() {
-       
+
         self.baseURL = URL(string: "http://192.168.1.197:11434")!
         let configuration = OllamaConfiguration(
             timeoutInterval: 120,
@@ -23,7 +23,10 @@ final class OllamaService {
             configuration: configuration
         )
 
-        AppLogger.shared.info("OllamaService initialized with baseURL: \(baseURL.absoluteString)", category: .ollama)
+        AppLogger.shared.info(
+            "OllamaService initialized with baseURL: \(baseURL.absoluteString)",
+            category: .ollama
+        )
     }
     func listModels() async throws -> [ModelListEntry] {
         return try await client.listModels()
@@ -33,10 +36,16 @@ final class OllamaService {
 
         do {
             let info = try await client.showModel(name: name, verbose: false)
-            AppLogger.shared.info("Successfully fetched info for \(name.fullName)", category: .ollama)
+            AppLogger.shared.info(
+                "Successfully fetched info for \(name.fullName)",
+                category: .ollama
+            )
             return info
         } catch {
-            AppLogger.shared.error("Failed to fetch model info: \(error.localizedDescription)", category: .ollama)
+            AppLogger.shared.error(
+                "Failed to fetch model info: \(error.localizedDescription)",
+                category: .ollama
+            )
             throw error
         }
     }
@@ -66,10 +75,16 @@ final class OllamaService {
                 options: chatOptions
             )
 
-            AppLogger.shared.info("Chat stream started - numPredict: \(chatOptions.modelOptions?.numPredict ?? 0), numCtx: \(chatOptions.modelOptions?.numCtx ?? 0)", category: .ollama)
+            AppLogger.shared.info(
+                "Chat stream started - numPredict: \(chatOptions.modelOptions?.numPredict ?? 0), numCtx: \(chatOptions.modelOptions?.numCtx ?? 0)",
+                category: .ollama
+            )
             return stream
         } catch {
-            AppLogger.shared.error("Failed to start chat: \(error.localizedDescription)", category: .ollama)
+            AppLogger.shared.error(
+                "Failed to start chat: \(error.localizedDescription)",
+                category: .ollama
+            )
             throw error
         }
     }
@@ -81,7 +96,10 @@ final class OllamaService {
             AppLogger.shared.info("Server healthy - version: \(version.version)", category: .ollama)
             return true
         } catch {
-            AppLogger.shared.error("Health check failed: \(error.localizedDescription)", category: .ollama)
+            AppLogger.shared.error(
+                "Health check failed: \(error.localizedDescription)",
+                category: .ollama
+            )
             return false
         }
     }

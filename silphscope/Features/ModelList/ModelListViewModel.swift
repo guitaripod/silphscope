@@ -1,5 +1,6 @@
 import Foundation
 import Swollama
+
 @MainActor
 final class ModelListViewModel: ObservableObject {
 
@@ -22,7 +23,8 @@ final class ModelListViewModel: ObservableObject {
             state = .loaded(models)
 
             if selectedModel == nil, let firstModel = models.first,
-               let modelName = OllamaModelName.parse(firstModel.name) {
+                let modelName = OllamaModelName.parse(firstModel.name)
+            {
                 selectedModel = modelName
                 ModelManager.shared.selectModel(modelName)
             }

@@ -1,4 +1,5 @@
 import UIKit
+
 final class ChatInputBar: UIView {
 
     var onSendMessage: ((String) -> Void)?
@@ -60,7 +61,7 @@ final class ChatInputBar: UIView {
 
         NSLayoutConstraint.activate([
             button.widthAnchor.constraint(equalToConstant: 36),
-            button.heightAnchor.constraint(equalToConstant: 36)
+            button.heightAnchor.constraint(equalToConstant: 36),
         ])
 
         return button
@@ -85,19 +86,27 @@ final class ChatInputBar: UIView {
 
         textViewContainer.addSubviews(textView, placeholderLabel)
 
-        textViewHeightConstraint = textView.heightAnchor.constraint(greaterThanOrEqualToConstant: 36)
+        textViewHeightConstraint = textView.heightAnchor.constraint(
+            greaterThanOrEqualToConstant: 36
+        )
         textViewHeightConstraint.priority = .defaultHigh
 
         NSLayoutConstraint.activate([
             textView.topAnchor.constraint(equalTo: textViewContainer.topAnchor),
-            textView.leadingAnchor.constraint(equalTo: textViewContainer.leadingAnchor, constant: 12),
-            textView.trailingAnchor.constraint(equalTo: textViewContainer.trailingAnchor, constant: -12),
+            textView.leadingAnchor.constraint(
+                equalTo: textViewContainer.leadingAnchor,
+                constant: 12
+            ),
+            textView.trailingAnchor.constraint(
+                equalTo: textViewContainer.trailingAnchor,
+                constant: -12
+            ),
             textView.bottomAnchor.constraint(equalTo: textViewContainer.bottomAnchor),
             textViewHeightConstraint,
             textView.heightAnchor.constraint(lessThanOrEqualToConstant: 120),
 
             placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 10),
-            placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: 8)
+            placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: 8),
         ])
 
         containerStack.addArrangedSubview(textViewContainer)
@@ -110,7 +119,7 @@ final class ChatInputBar: UIView {
             border.topAnchor.constraint(equalTo: topAnchor),
             border.leadingAnchor.constraint(equalTo: leadingAnchor),
             border.trailingAnchor.constraint(equalTo: trailingAnchor),
-            border.heightAnchor.constraint(equalToConstant: 0.5)
+            border.heightAnchor.constraint(equalToConstant: 0.5),
         ])
 
         updateSendButton()

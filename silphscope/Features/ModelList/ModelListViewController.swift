@@ -1,5 +1,6 @@
-import UIKit
 import Swollama
+import UIKit
+
 final class ModelListViewController: UIViewController {
 
     private let viewModel = ModelListViewModel()
@@ -93,7 +94,10 @@ final class ModelListViewController: UIViewController {
 
             chatButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             chatButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            chatButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            chatButton.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                constant: -16
+            ),
             chatButton.heightAnchor.constraint(equalToConstant: 50),
 
             loadingView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -102,7 +106,7 @@ final class ModelListViewController: UIViewController {
             errorLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             errorLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             errorLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
-            errorLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40)
+            errorLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
         ])
     }
 
@@ -111,14 +115,16 @@ final class ModelListViewController: UIViewController {
             tableView: tableView
         ) { [weak self] tableView, indexPath, digest in
             guard let self = self,
-                  let model = self.modelsMap[digest] else {
+                let model = self.modelsMap[digest]
+            else {
                 return UITableViewCell()
             }
 
-            let cell = tableView.dequeueReusableCell(
-                withIdentifier: ModelCell.reuseIdentifier,
-                for: indexPath
-            ) as! ModelCell
+            let cell =
+                tableView.dequeueReusableCell(
+                    withIdentifier: ModelCell.reuseIdentifier,
+                    for: indexPath
+                ) as! ModelCell
 
             let isSelected = self.viewModel.selectedModel?.fullName == model.name
             cell.configure(with: model, isSelected: isSelected)
@@ -215,7 +221,8 @@ extension ModelListViewController: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard let digest = dataSource.itemIdentifier(for: indexPath),
-              let model = modelsMap[digest] else { return }
+            let model = modelsMap[digest]
+        else { return }
 
         viewModel.selectModel(model)
         let generator = UISelectionFeedbackGenerator()

@@ -1,4 +1,5 @@
 import UIKit
+
 final class MessageCell: UITableViewCell {
 
     static let reuseIdentifier = "MessageCell"
@@ -57,19 +58,30 @@ final class MessageCell: UITableViewCell {
         bubbleContainer.addSubview(stackView)
         contentView.addSubview(bubbleContainer)
 
-        let minHeightConstraint = messageLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 20)
+        let minHeightConstraint = messageLabel.heightAnchor.constraint(
+            greaterThanOrEqualToConstant: 20
+        )
         minHeightConstraint.priority = .defaultHigh
 
         NSLayoutConstraint.activate([
             stackView.topAnchor.constraint(equalTo: bubbleContainer.topAnchor, constant: 12),
-            stackView.leadingAnchor.constraint(equalTo: bubbleContainer.leadingAnchor, constant: 12),
-            stackView.trailingAnchor.constraint(equalTo: bubbleContainer.trailingAnchor, constant: -12),
+            stackView.leadingAnchor.constraint(
+                equalTo: bubbleContainer.leadingAnchor,
+                constant: 12
+            ),
+            stackView.trailingAnchor.constraint(
+                equalTo: bubbleContainer.trailingAnchor,
+                constant: -12
+            ),
             stackView.bottomAnchor.constraint(equalTo: bubbleContainer.bottomAnchor, constant: -12),
 
             bubbleContainer.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
-            bubbleContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
+            bubbleContainer.bottomAnchor.constraint(
+                equalTo: contentView.bottomAnchor,
+                constant: -4
+            ),
 
-            minHeightConstraint
+            minHeightConstraint,
         ])
 
         leadingConstraint = bubbleContainer.leadingAnchor.constraint(

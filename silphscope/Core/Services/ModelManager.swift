@@ -1,5 +1,6 @@
 import Foundation
 import Swollama
+
 final class ModelManager {
 
     static let shared = ModelManager()

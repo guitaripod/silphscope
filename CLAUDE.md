@@ -43,3 +43,7 @@ xcodebuild -project silphscope.xcodeproj -scheme silphscope clean
 - **Supported devices**: iPhone only (TARGETED_DEVICE_FAMILY = 1)
 - **Bundle ID**: com.guitaripod.silphscope
 - **Team ID**: P4DQK6SRKR
+
+## Coding practices
+
+- **swift-format**: Always run swift-format before committing anything.

@@ -24,7 +24,7 @@ final class ViewController: UIViewController {
             statusLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             statusLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
-            statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40)
+            statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
         ])
     }
 
@@ -43,7 +43,8 @@ final class ViewController: UIViewController {
                     }
                 } catch {
                     await MainActor.run {
-                        statusLabel.text = "❌ Error fetching models:\n\(OllamaService.shared.userFriendlyError(error))"
+                        statusLabel.text =
+                            "❌ Error fetching models:\n\(OllamaService.shared.userFriendlyError(error))"
                     }
                 }
             } else {

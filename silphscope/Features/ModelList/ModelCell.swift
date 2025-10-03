@@ -1,5 +1,6 @@
-import UIKit
 import Swollama
+import UIKit
+
 final class ModelCell: UITableViewCell {
 
     static let reuseIdentifier = "ModelCell"
@@ -52,7 +53,7 @@ final class ModelCell: UITableViewCell {
         imageView.isHidden = true
         NSLayoutConstraint.activate([
             imageView.widthAnchor.constraint(equalToConstant: 24),
-            imageView.heightAnchor.constraint(equalToConstant: 24)
+            imageView.heightAnchor.constraint(equalToConstant: 24),
         ])
         return imageView
     }()

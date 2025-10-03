@@ -17,7 +17,10 @@ final class AppLogger {
         case general = "General"
 
         var logger: Logger {
-            Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.guitaripod.silphscope", category: rawValue)
+            Logger(
+                subsystem: Bundle.main.bundleIdentifier ?? "com.guitaripod.silphscope",
+                category: rawValue
+            )
         }
     }
 
