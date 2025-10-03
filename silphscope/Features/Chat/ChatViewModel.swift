@@ -1,8 +1,10 @@
 import Foundation
 import Swollama
+import Observation
 
+@Observable
 @MainActor
-final class ChatViewModel: ObservableObject {
+final class ChatViewModel {
 
     struct Message: Hashable, Identifiable {
         let id = UUID()
@@ -21,9 +23,9 @@ final class ChatViewModel: ObservableObject {
         }
     }
 
-    @Published private(set) var messages: [Message] = []
-    @Published private(set) var isGenerating = false
-    @Published private(set) var error: String?
+    private(set) var messages: [Message] = []
+    private(set) var isGenerating = false
+    private(set) var error: String?
 
     private let llmService: LLMServiceProtocol
     private let modelManager: ModelManagerProtocol

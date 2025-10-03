@@ -1,12 +1,11 @@
-import Combine
 import Swollama
 import UIKit
 
 final class ChatViewController: UIViewController {
 
     private let viewModel = ChatViewModel()
-    private var cancellables = Set<AnyCancellable>()
     private var dataSource: UICollectionViewDiffableDataSource<Int, ChatViewModel.Message>!
+    private var observationTask: Task<Void, Never>?
 
     private lazy var collectionView: UICollectionView = {
         let layout = createLayout()
@@ -91,7 +90,7 @@ final class ChatViewController: UIViewController {
         setupUI()
         setupConstraints()
         setupDataSource()
-        bindViewModel()
+        observeViewModel()
         setupNavigationBar()
         setupKeyboardObservers()
     }
@@ -99,6 +98,10 @@ final class ChatViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         textView.becomeFirstResponder()
+    }
+
+    deinit {
+        observationTask?.cancel()
     }
 
     private func setupUI() {
@@ -166,56 +169,108 @@ final class ChatViewController: UIViewController {
         }
     }
 
-    private func bindViewModel() {
-        viewModel.$messages
-            .receive(on: RunLoop.main)
-            .sink { [weak self] messages in
-                self?.updateSnapshot(with: messages, animated: true)
-            }
-            .store(in: &cancellables)
+    private func observeViewModel() {
+        observeMessages()
+        observeGeneratingState()
+        observeErrors()
+    }
 
-        viewModel.$isGenerating
-            .receive(on: RunLoop.main)
-            .sink { [weak self] isGenerating in
-                self?.handleGeneratingStateChange(isGenerating)
-            }
-            .store(in: &cancellables)
+    private func observeMessages() {
+        observationTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
 
-        viewModel.$error
-            .compactMap { $0 }
-            .receive(on: RunLoop.main)
-            .sink { [weak self] error in
-                self?.showError(error)
+                let messages = withObservationTracking {
+                    viewModel.messages
+                } onChange: {
+                    Task { @MainActor [weak self] in
+                        self?.observeMessages()
+                    }
+                }
+
+                updateMessages(messages)
+                break
             }
-            .store(in: &cancellables)
+        }
+    }
+
+    private func observeGeneratingState() {
+        Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+
+                let isGenerating = withObservationTracking {
+                    viewModel.isGenerating
+                } onChange: {
+                    Task { @MainActor [weak self] in
+                        self?.observeGeneratingState()
+                    }
+                }
+
+                handleGeneratingStateChange(isGenerating)
+                break
+            }
+        }
+    }
+
+    private func observeErrors() {
+        Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+
+                let error = withObservationTracking {
+                    viewModel.error
+                } onChange: {
+                    Task { @MainActor [weak self] in
+                        self?.observeErrors()
+                    }
+                }
+
+                if let error {
+                    showError(error)
+                }
+                break
+            }
+        }
+    }
+
+    private func updateMessages(_ messages: [ChatViewModel.Message]) {
+        let isStreaming = messages.last?.isStreaming ?? false
+
+        if isStreaming && !messages.isEmpty {
+            updateStreamingMessage(messages)
+        } else {
+            updateSnapshot(with: messages, animated: true)
+        }
+    }
+
+    private func updateStreamingMessage(_ messages: [ChatViewModel.Message]) {
+        let lastIndexPath = IndexPath(item: messages.count - 1, section: 0)
+
+        if let cell = collectionView.cellForItem(at: lastIndexPath) as? StreamingMessageCell {
+            cell.configure(with: messages.last!)
+            collectionView.performBatchUpdates(nil) { [weak self] _ in
+                self?.maintainBottomScroll()
+            }
+        } else {
+            updateSnapshot(with: messages, animated: false)
+        }
     }
 
     private func updateSnapshot(with messages: [ChatViewModel.Message], animated: Bool) {
-        let isStreaming = messages.last?.isStreaming ?? false
-
         var snapshot = NSDiffableDataSourceSnapshot<Int, ChatViewModel.Message>()
         snapshot.appendSections([0])
         snapshot.appendItems(messages)
 
-        if isStreaming && !messages.isEmpty {
-            snapshot.reconfigureItems([messages.last!])
-        }
-
-        dataSource.apply(snapshot, animatingDifferences: animated && !isStreaming) { [weak self] in
+        dataSource.apply(snapshot, animatingDifferences: animated) { [weak self] in
             guard let self = self, !messages.isEmpty else { return }
 
-            if isStreaming {
-                self.maintainBottomScroll()
-            } else {
-                DispatchQueue.main.async {
-                    let lastIndexPath = IndexPath(item: messages.count - 1, section: 0)
-                    self.collectionView.scrollToItem(
-                        at: lastIndexPath,
-                        at: .bottom,
-                        animated: animated
-                    )
-                }
-            }
+            let lastIndexPath = IndexPath(item: messages.count - 1, section: 0)
+            self.collectionView.scrollToItem(
+                at: lastIndexPath,
+                at: .bottom,
+                animated: animated
+            )
         }
     }
 
@@ -484,19 +539,8 @@ final class StreamingMessageCell: UICollectionViewCell {
             NSLayoutConstraint.activate([bubbleLeadingConstraint, bubbleTrailingConstraint])
         }
 
-        let oldText = textLabel.text ?? ""
-        let newText = presenter.formatMessageContent(message)
+        textLabel.text = presenter.formatMessageContent(message)
         textLabel.alpha = presenter.shouldShowAsThinking(message) ? 0.6 : 1.0
-
-        if oldText.count < newText.count && message.isStreaming && !isUser {
-            textLabel.text = newText
-            let transition = CATransition()
-            transition.type = .fade
-            transition.duration = 0.15
-            textLabel.layer.add(transition, forKey: "textChange")
-        } else {
-            textLabel.text = newText
-        }
     }
 
     override func prepareForReuse() {

@@ -12,19 +12,15 @@ final class StreamingHandler {
     weak var delegate: StreamingHandlerDelegate?
 
     private var streamBuffer = ""
-    private var chunkBuffer: [String] = []
     private var currentTask: Task<Void, Never>?
 
     func startStreaming(
         _ stream: AsyncThrowingStream<ChatResponse, Error>
     ) {
         streamBuffer = ""
-        chunkBuffer = []
 
-        currentTask = Task {
+        currentTask = Task { @MainActor in
             do {
-                var isFirstUpdate = true
-
                 for try await response in stream {
                     if Task.isCancelled {
                         AppLogger.shared.debug(
@@ -39,31 +35,13 @@ final class StreamingHandler {
                             "✅ Chat completed: \(streamBuffer.count) chars",
                             category: .ollama
                         )
-                        if !chunkBuffer.isEmpty {
-                            flushChunkBuffer()
-                        }
                         delegate?.streamingHandler(self, didCompleteWithContent: streamBuffer)
                         break
                     }
 
                     let chunk = response.message.content
                     if !chunk.isEmpty {
-                        if isFirstUpdate {
-                            streamBuffer = chunk
-                            delegate?.streamingHandler(self, didUpdateContent: streamBuffer)
-                            isFirstUpdate = false
-                        } else {
-                            chunkBuffer.append(chunk)
-
-                            let bufferedText = chunkBuffer.joined()
-                            let shouldUpdate =
-                                chunkBuffer.count >= 4 || bufferedText.contains("\n")
-                                || bufferedText.count > 40
-
-                            if shouldUpdate {
-                                flushChunkBuffer()
-                            }
-                        }
+                        await processChunkWithDelays(chunk)
                     }
                 }
             } catch {
@@ -76,18 +54,31 @@ final class StreamingHandler {
     func cancel() {
         currentTask?.cancel()
         currentTask = nil
-        if !chunkBuffer.isEmpty {
-            flushChunkBuffer()
-        }
     }
 
-    private func flushChunkBuffer() {
-        guard !chunkBuffer.isEmpty else { return }
+    @MainActor
+    private func processChunkWithDelays(_ chunk: String) async {
+        if chunk.count < 5 {
+            streamBuffer += chunk
+            delegate?.streamingHandler(self, didUpdateContent: streamBuffer)
+            return
+        }
 
-        let newContent = chunkBuffer.joined()
-        streamBuffer += newContent
-        chunkBuffer.removeAll()
+        var remainingContent = chunk
+        while !remainingContent.isEmpty {
+            if Task.isCancelled { break }
 
-        delegate?.streamingHandler(self, didUpdateContent: streamBuffer)
+            let chunkSize = min(Int.random(in: 1...3), remainingContent.count)
+            let startIndex = remainingContent.startIndex
+            let endIndex = remainingContent.index(startIndex, offsetBy: chunkSize)
+            let miniChunk = String(remainingContent[startIndex..<endIndex])
+
+            streamBuffer += miniChunk
+            delegate?.streamingHandler(self, didUpdateContent: streamBuffer)
+
+            try? await Task.sleep(nanoseconds: 5_000_000)
+
+            remainingContent.removeFirst(chunkSize)
+        }
     }
 }
