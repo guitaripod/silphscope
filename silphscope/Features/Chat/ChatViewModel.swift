@@ -1,6 +1,7 @@
 import Foundation
-import Swollama
 import Observation
+import StreamingTextKit
+import Swollama
 
 @Observable
 @MainActor
@@ -29,13 +30,13 @@ final class ChatViewModel {
 
     private let llmService: LLMServiceProtocol
     private let modelManager: ModelManagerProtocol
-    private let streamingHandler: StreamingHandler
+    private let streamingHandler: StreamingTextHandler
     private var streamingMessageIndex: Int?
 
     init(
         llmService: LLMServiceProtocol = OllamaService.shared,
         modelManager: ModelManagerProtocol = ModelManager.shared,
-        streamingHandler: StreamingHandler = StreamingHandler()
+        streamingHandler: StreamingTextHandler = StreamingTextHandler()
     ) {
         self.llmService = llmService
         self.modelManager = modelManager
@@ -93,14 +94,15 @@ final class ChatViewModel {
                 ChatMessage(role: message.role, content: message.content)
             }
 
-            let stream = try await llmService.chat(
+            let ollamaStream = try await llmService.chat(
                 messages: Array(chatMessages),
                 model: model,
                 temperature: 0.7,
                 options: .default
             )
 
-            streamingHandler.startStreaming(stream)
+            let textStream = SwollamaStreamAdapter.adapt(ollamaStream)
+            streamingHandler.startStreaming(textStream)
 
         } catch {
             AppLogger.shared.error("Chat generation failed: \(error)", category: .ollama)
@@ -116,14 +118,14 @@ final class ChatViewModel {
     }
 }
 
-extension ChatViewModel: StreamingHandlerDelegate {
+extension ChatViewModel: StreamingTextDelegate {
 
-    func streamingHandler(_ handler: StreamingHandler, didUpdateContent content: String) {
+    func streamingHandler(_ handler: StreamingTextHandler, didUpdateContent content: String) {
         guard let index = streamingMessageIndex, index < messages.count else { return }
         messages[index].content = content
     }
 
-    func streamingHandler(_ handler: StreamingHandler, didCompleteWithContent content: String) {
+    func streamingHandler(_ handler: StreamingTextHandler, didCompleteWithContent content: String) {
         guard let index = streamingMessageIndex, index < messages.count else { return }
         messages[index].content = content
         messages[index].isStreaming = false
@@ -131,7 +133,7 @@ extension ChatViewModel: StreamingHandlerDelegate {
         isGenerating = false
     }
 
-    func streamingHandler(_ handler: StreamingHandler, didFailWithError error: Error) {
+    func streamingHandler(_ handler: StreamingTextHandler, didFailWithError error: Error) {
         if let index = streamingMessageIndex {
             messages.remove(at: index)
         }

@@ -1,3 +1,4 @@
+import StreamingTextKit
 import Swollama
 import UIKit
 
@@ -267,7 +268,10 @@ final class ChatViewController: UIViewController {
             let frameHeight = collectionView.frame.height
 
             if contentHeight > frameHeight {
-                let bottomOffset = max(0, contentHeight - frameHeight + collectionView.contentInset.bottom)
+                let bottomOffset = max(
+                    0,
+                    contentHeight - frameHeight + collectionView.contentInset.bottom
+                )
                 collectionView.contentOffset = CGPoint(x: 0, y: bottomOffset)
             }
         } else {
@@ -465,7 +469,7 @@ final class StreamingMessageCell: UICollectionViewCell {
 
     static let identifier = "StreamingMessageCell"
 
-    private let presenter: MessagePresenting = MessagePresenter()
+    private let presenter: MessagePresenting = StreamingTextKit.MessagePresenter()
 
     private let bubbleView: UIView = {
         let view = UIView()
@@ -539,6 +543,7 @@ final class StreamingMessageCell: UICollectionViewCell {
     }
 
     func configure(with message: ChatViewModel.Message) {
+        let streamingMessage = message.asStreamingTextMessage
         let isUser = message.role == .user
 
         NSLayoutConstraint.deactivate([
@@ -558,15 +563,16 @@ final class StreamingMessageCell: UICollectionViewCell {
             NSLayoutConstraint.activate([bubbleLeadingConstraint, bubbleTrailingConstraint])
         }
 
-        textLabel.text = presenter.formatMessageContent(message)
-        textLabel.alpha = presenter.shouldShowAsThinking(message) ? 0.6 : 1.0
+        textLabel.text = presenter.formatMessageContent(streamingMessage)
+        textLabel.alpha = presenter.shouldShowAsThinking(streamingMessage) ? 0.6 : 1.0
     }
 
     func updateContent(_ message: ChatViewModel.Message) {
-        let newText = presenter.formatMessageContent(message)
+        let streamingMessage = message.asStreamingTextMessage
+        let newText = presenter.formatMessageContent(streamingMessage)
         if textLabel.text != newText {
             textLabel.text = newText
-            textLabel.alpha = presenter.shouldShowAsThinking(message) ? 0.6 : 1.0
+            textLabel.alpha = presenter.shouldShowAsThinking(streamingMessage) ? 0.6 : 1.0
             contentView.setNeedsLayout()
         }
     }

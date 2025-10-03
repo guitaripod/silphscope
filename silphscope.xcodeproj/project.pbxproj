@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		2C50746F2E8DD6B4003CD8A5 /* Swollama in Frameworks */ = {isa = PBXBuildFile; productRef = 2C50746E2E8DD6B4003CD8A5 /* Swollama */; };
 		2CC3C1892E8DD934004E9679 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 2CC3C1882E8DD934004E9679 /* GRDB */; };
+		2CC3C1C32E907121004E9679 /* StreamingTextKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2CC3C1C22E907121004E9679 /* StreamingTextKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2CC3C1C32E907121004E9679 /* StreamingTextKit in Frameworks */,
 				2C50746F2E8DD6B4003CD8A5 /* Swollama in Frameworks */,
 				2CC3C1892E8DD934004E9679 /* GRDB in Frameworks */,
 			);
@@ -87,6 +89,7 @@
 			packageProductDependencies = (
 				2C50746E2E8DD6B4003CD8A5 /* Swollama */,
 				2CC3C1882E8DD934004E9679 /* GRDB */,
+				2CC3C1C22E907121004E9679 /* StreamingTextKit */,
 			);
 			productName = silphscope;
 			productReference = 2C5074432E8DD159003CD8A5 /* silphscope.app */;
@@ -119,6 +122,7 @@
 			packageReferences = (
 				2C50746D2E8DD6B4003CD8A5 /* XCLocalSwiftPackageReference "../../swift/Swollama" */,
 				2CC3C1872E8DD934004E9679 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				2CC3C1C12E907121004E9679 /* XCLocalSwiftPackageReference "StreamingTextKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2C5074442E8DD159003CD8A5 /* Products */;
@@ -362,6 +366,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../../swift/Swollama;
 		};
+		2CC3C1C12E907121004E9679 /* XCLocalSwiftPackageReference "StreamingTextKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = StreamingTextKit;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -384,6 +392,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2CC3C1872E8DD934004E9679 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
+		};
+		2CC3C1C22E907121004E9679 /* StreamingTextKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = StreamingTextKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
