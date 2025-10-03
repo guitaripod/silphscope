@@ -1,19 +1,23 @@
 import Foundation
 import Swollama
 
-final class ModelManager {
+final class ModelManager: ModelManagerProtocol {
 
-    static let shared = ModelManager()
+    static let shared: ModelManagerProtocol = ModelManager()
 
     private(set) var availableModels: [ModelListEntry] = []
     private(set) var selectedModel: OllamaModelName?
     var onModelsUpdated: (([ModelListEntry]) -> Void)?
     var onModelSelected: ((OllamaModelName) -> Void)?
 
-    private init() {}
+    private let llmService: LLMServiceProtocol
+
+    private init(llmService: LLMServiceProtocol = OllamaService.shared) {
+        self.llmService = llmService
+    }
     @MainActor
     func fetchModels() async throws {
-        let models = try await OllamaService.shared.listModels()
+        let models = try await llmService.listModels()
         availableModels = models.sorted { $0.modifiedAt > $1.modifiedAt }
         if selectedModel == nil, let firstModel = models.first {
             if let modelName = OllamaModelName.parse(firstModel.name) {

@@ -1,9 +1,9 @@
 import Foundation
 import Swollama
 
-final class OllamaService {
+final class OllamaService: LLMServiceProtocol {
 
-    static let shared = OllamaService()
+    static let shared: LLMServiceProtocol = OllamaService()
 
     private let client: OllamaClient
     private let baseURL: URL

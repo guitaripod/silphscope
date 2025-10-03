@@ -392,6 +392,8 @@ final class StreamingMessageCell: UICollectionViewCell {
 
     static let identifier = "StreamingMessageCell"
 
+    private let presenter: MessagePresenting = MessagePresenter()
+
     private let bubbleView: UIView = {
         let view = UIView()
         view.setupForAutoLayout()
@@ -432,11 +434,11 @@ final class StreamingMessageCell: UICollectionViewCell {
         )
         bubbleTrailingConstraint = bubbleView.trailingAnchor.constraint(
             lessThanOrEqualTo: contentView.trailingAnchor,
-            constant: -60
+            constant: -40
         )
         bubbleLeadingUserConstraint = bubbleView.leadingAnchor.constraint(
             greaterThanOrEqualTo: contentView.leadingAnchor,
-            constant: 60
+            constant: 40
         )
         bubbleTrailingUserConstraint = bubbleView.trailingAnchor.constraint(
             equalTo: contentView.trailingAnchor,
@@ -454,7 +456,7 @@ final class StreamingMessageCell: UICollectionViewCell {
             bubbleView.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
             bubbleView.widthAnchor.constraint(
                 lessThanOrEqualTo: contentView.widthAnchor,
-                multiplier: 0.75
+                multiplier: 0.85
             ),
         ])
 
@@ -483,15 +485,8 @@ final class StreamingMessageCell: UICollectionViewCell {
         }
 
         let oldText = textLabel.text ?? ""
-        let newText: String
-
-        if message.content.isEmpty && message.isStreaming {
-            newText = "Thinking..."
-            textLabel.alpha = 0.6
-        } else {
-            newText = message.content.isEmpty ? " " : message.content
-            textLabel.alpha = 1.0
-        }
+        let newText = presenter.formatMessageContent(message)
+        textLabel.alpha = presenter.shouldShowAsThinking(message) ? 0.6 : 1.0
 
         if oldText.count < newText.count && message.isStreaming && !isUser {
             textLabel.text = newText

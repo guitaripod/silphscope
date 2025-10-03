@@ -14,11 +14,22 @@ final class ModelListViewModel: ObservableObject {
     @Published private(set) var state: State = .idle
     @Published private(set) var selectedModel: OllamaModelName?
 
+    private let llmService: LLMServiceProtocol
+    private let modelManager: ModelManagerProtocol
+
+    init(
+        llmService: LLMServiceProtocol = OllamaService.shared,
+        modelManager: ModelManagerProtocol = ModelManager.shared
+    ) {
+        self.llmService = llmService
+        self.modelManager = modelManager
+    }
+
     func loadModels() async {
         state = .loading
 
         do {
-            let models = try await OllamaService.shared.listModels()
+            let models = try await llmService.listModels()
             AppLogger.shared.info("Fetched \(models.count) models from Ollama", category: .ollama)
             state = .loaded(models)
 
@@ -26,10 +37,10 @@ final class ModelListViewModel: ObservableObject {
                 let modelName = OllamaModelName.parse(firstModel.name)
             {
                 selectedModel = modelName
-                ModelManager.shared.selectModel(modelName)
+                modelManager.selectModel(modelName)
             }
         } catch {
-            let errorMessage = OllamaService.shared.userFriendlyError(error)
+            let errorMessage = llmService.userFriendlyError(error)
             state = .error(errorMessage)
             AppLogger.shared.error("Failed to load models: \(error)", category: .ollama)
         }
@@ -42,7 +53,7 @@ final class ModelListViewModel: ObservableObject {
         }
 
         selectedModel = modelName
-        ModelManager.shared.selectModel(modelName)
+        modelManager.selectModel(modelName)
         AppLogger.shared.info("Selected model: \(modelName.fullName)", category: .ollama)
     }
 }

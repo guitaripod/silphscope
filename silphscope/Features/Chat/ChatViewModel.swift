@@ -25,15 +25,26 @@ final class ChatViewModel: ObservableObject {
     @Published private(set) var isGenerating = false
     @Published private(set) var error: String?
 
-    private var currentStreamingTask: Task<Void, Never>?
-    private var streamBuffer = ""
+    private let llmService: LLMServiceProtocol
+    private let modelManager: ModelManagerProtocol
+    private let streamingHandler: StreamingHandler
     private var streamingMessageIndex: Int?
-    private var chunkBuffer: [String] = []
+
+    init(
+        llmService: LLMServiceProtocol = OllamaService.shared,
+        modelManager: ModelManagerProtocol = ModelManager.shared,
+        streamingHandler: StreamingHandler = StreamingHandler()
+    ) {
+        self.llmService = llmService
+        self.modelManager = modelManager
+        self.streamingHandler = streamingHandler
+        self.streamingHandler.delegate = self
+    }
 
     func sendMessage(_ text: String) async {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         guard !isGenerating else { return }
-        guard let model = ModelManager.shared.selectedModel else {
+        guard let model = modelManager.selectedModel else {
             error = "No model selected"
             return
         }
@@ -55,24 +66,18 @@ final class ChatViewModel: ObservableObject {
             isStreaming: true
         )
         messages.append(assistantMessage)
-        let assistantIndex = messages.count - 1
+        streamingMessageIndex = messages.count - 1
 
-        currentStreamingTask = Task {
-            await generateResponse(for: model, assistantIndex: assistantIndex)
-        }
+        await generateResponse(for: model)
     }
 
     func cancelGeneration() {
-        currentStreamingTask?.cancel()
-        currentStreamingTask = nil
+        streamingHandler.cancel()
         isGenerating = false
         if let index = streamingMessageIndex {
-            flushChunkBuffer()
             messages[index].isStreaming = false
             streamingMessageIndex = nil
         }
-        streamBuffer = ""
-        chunkBuffer = []
     }
 
     func clearMessages() {
@@ -80,93 +85,57 @@ final class ChatViewModel: ObservableObject {
         error = nil
     }
 
-    private func generateResponse(for model: OllamaModelName, assistantIndex: Int) async {
-        streamingMessageIndex = assistantIndex
-        streamBuffer = ""
-        chunkBuffer = []
-
+    private func generateResponse(for model: OllamaModelName) async {
         do {
             let chatMessages = messages.dropLast().map { message in
                 ChatMessage(role: message.role, content: message.content)
             }
 
-            let stream = try await OllamaService.shared.chat(
+            let stream = try await llmService.chat(
                 messages: Array(chatMessages),
-                model: model
+                model: model,
+                temperature: 0.7,
+                options: .default
             )
 
-            var isFirstUpdate = true
-
-            for try await response in stream {
-                if Task.isCancelled {
-                    AppLogger.shared.debug(
-                        "Stream cancelled at \(streamBuffer.count) chars",
-                        category: .ollama
-                    )
-                    break
-                }
-
-                if response.done {
-                    AppLogger.shared.info(
-                        "✅ Chat completed: \(streamBuffer.count) chars",
-                        category: .ollama
-                    )
-                    if !chunkBuffer.isEmpty {
-                        flushChunkBuffer()
-                    }
-                    break
-                }
-
-                let chunk = response.message.content
-                if !chunk.isEmpty {
-                    if isFirstUpdate {
-                        streamBuffer = chunk
-                        messages[assistantIndex].content = streamBuffer
-                        isFirstUpdate = false
-                    } else {
-                        chunkBuffer.append(chunk)
-
-                        let bufferedText = chunkBuffer.joined()
-                        let shouldUpdate =
-                            chunkBuffer.count >= 4 || bufferedText.contains("\n")
-                            || bufferedText.count > 40
-
-                        if shouldUpdate {
-                            flushChunkBuffer()
-                        }
-                    }
-                }
-            }
-
-            if let index = streamingMessageIndex, index < messages.count {
-                messages[index].isStreaming = false
-            }
-            streamingMessageIndex = nil
-            isGenerating = false
+            streamingHandler.startStreaming(stream)
 
         } catch {
             AppLogger.shared.error("Chat generation failed: \(error)", category: .ollama)
 
-            if assistantIndex < messages.count {
-                messages.remove(at: assistantIndex)
+            if let index = streamingMessageIndex {
+                messages.remove(at: index)
             }
 
             streamingMessageIndex = nil
-            self.error = OllamaService.shared.userFriendlyError(error)
+            self.error = llmService.userFriendlyError(error)
             isGenerating = false
         }
     }
+}
 
-    private func flushChunkBuffer() {
-        guard !chunkBuffer.isEmpty,
-            let index = streamingMessageIndex,
-            index < messages.count
-        else { return }
+extension ChatViewModel: StreamingHandlerDelegate {
 
-        let newContent = chunkBuffer.joined()
-        streamBuffer += newContent
-        chunkBuffer.removeAll()
+    func streamingHandler(_ handler: StreamingHandler, didUpdateContent content: String) {
+        guard let index = streamingMessageIndex, index < messages.count else { return }
+        messages[index].content = content
+    }
 
-        messages[index].content = streamBuffer
+    func streamingHandler(_ handler: StreamingHandler, didCompleteWithContent content: String) {
+        guard let index = streamingMessageIndex, index < messages.count else { return }
+        messages[index].content = content
+        messages[index].isStreaming = false
+        streamingMessageIndex = nil
+        isGenerating = false
+    }
+
+    func streamingHandler(_ handler: StreamingHandler, didFailWithError error: Error) {
+        if let index = streamingMessageIndex {
+            messages.remove(at: index)
+        }
+
+        streamingMessageIndex = nil
+        self.error = llmService.userFriendlyError(error)
+        isGenerating = false
     }
 }
