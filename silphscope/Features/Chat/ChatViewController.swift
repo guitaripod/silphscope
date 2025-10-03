@@ -248,9 +248,27 @@ final class ChatViewController: UIViewController {
         let lastIndexPath = IndexPath(item: messages.count - 1, section: 0)
 
         if let cell = collectionView.cellForItem(at: lastIndexPath) as? StreamingMessageCell {
-            cell.configure(with: messages.last!)
-            collectionView.performBatchUpdates(nil) { [weak self] _ in
-                self?.maintainBottomScroll()
+            let previousHeight = cell.frame.height
+            cell.updateContent(messages.last!)
+
+            let newHeight = cell.contentView.systemLayoutSizeFitting(
+                CGSize(width: cell.frame.width, height: UIView.layoutFittingExpandedSize.height),
+                withHorizontalFittingPriority: .required,
+                verticalFittingPriority: .fittingSizeLevel
+            ).height
+
+            if abs(newHeight - previousHeight) > 1 {
+                UIView.performWithoutAnimation {
+                    collectionView.collectionViewLayout.invalidateLayout()
+                }
+            }
+
+            let contentHeight = collectionView.contentSize.height
+            let frameHeight = collectionView.frame.height
+
+            if contentHeight > frameHeight {
+                let bottomOffset = max(0, contentHeight - frameHeight + collectionView.contentInset.bottom)
+                collectionView.contentOffset = CGPoint(x: 0, y: bottomOffset)
             }
         } else {
             updateSnapshot(with: messages, animated: false)
@@ -462,6 +480,7 @@ final class StreamingMessageCell: UICollectionViewCell {
         label.setupForAutoLayout()
         label.numberOfLines = 0
         label.font = .systemFont(ofSize: 16)
+        label.lineBreakMode = .byWordWrapping
         return label
     }()
 
@@ -501,13 +520,13 @@ final class StreamingMessageCell: UICollectionViewCell {
         )
 
         NSLayoutConstraint.activate([
-            textLabel.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 10),
+            textLabel.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 12),
             textLabel.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
             textLabel.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
-            textLabel.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -10),
+            textLabel.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -12),
 
-            bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 2),
-            bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -2),
+            bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
+            bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
             bubbleView.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
             bubbleView.widthAnchor.constraint(
                 lessThanOrEqualTo: contentView.widthAnchor,
@@ -541,6 +560,15 @@ final class StreamingMessageCell: UICollectionViewCell {
 
         textLabel.text = presenter.formatMessageContent(message)
         textLabel.alpha = presenter.shouldShowAsThinking(message) ? 0.6 : 1.0
+    }
+
+    func updateContent(_ message: ChatViewModel.Message) {
+        let newText = presenter.formatMessageContent(message)
+        if textLabel.text != newText {
+            textLabel.text = newText
+            textLabel.alpha = presenter.shouldShowAsThinking(message) ? 0.6 : 1.0
+            contentView.setNeedsLayout()
+        }
     }
 
     override func prepareForReuse() {
