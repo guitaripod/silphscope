@@ -484,8 +484,6 @@ final class StreamingMessageCell: UICollectionViewCell {
     private let bubbleView: UIView = {
         let view = UIView()
         view.setupForAutoLayout()
-        view.layer.cornerRadius = 18
-        view.layer.cornerCurve = .continuous
         return view
     }()
 
@@ -500,8 +498,8 @@ final class StreamingMessageCell: UICollectionViewCell {
 
     private var bubbleLeadingConstraint: NSLayoutConstraint!
     private var bubbleTrailingConstraint: NSLayoutConstraint!
-    private var bubbleLeadingUserConstraint: NSLayoutConstraint!
-    private var bubbleTrailingUserConstraint: NSLayoutConstraint!
+    private var bubbleFullWidthLeadingConstraint: NSLayoutConstraint!
+    private var bubbleFullWidthTrailingConstraint: NSLayoutConstraint!
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -517,20 +515,20 @@ final class StreamingMessageCell: UICollectionViewCell {
         bubbleView.addSubview(textLabel)
 
         bubbleLeadingConstraint = bubbleView.leadingAnchor.constraint(
-            equalTo: contentView.leadingAnchor,
-            constant: 16
-        )
-        bubbleTrailingConstraint = bubbleView.trailingAnchor.constraint(
-            lessThanOrEqualTo: contentView.trailingAnchor,
-            constant: -40
-        )
-        bubbleLeadingUserConstraint = bubbleView.leadingAnchor.constraint(
             greaterThanOrEqualTo: contentView.leadingAnchor,
             constant: 40
         )
-        bubbleTrailingUserConstraint = bubbleView.trailingAnchor.constraint(
+        bubbleTrailingConstraint = bubbleView.trailingAnchor.constraint(
             equalTo: contentView.trailingAnchor,
             constant: -16
+        )
+        bubbleFullWidthLeadingConstraint = bubbleView.leadingAnchor.constraint(
+            equalTo: contentView.leadingAnchor,
+            constant: 8
+        )
+        bubbleFullWidthTrailingConstraint = bubbleView.trailingAnchor.constraint(
+            equalTo: contentView.trailingAnchor,
+            constant: -8
         )
 
         NSLayoutConstraint.activate([
@@ -541,15 +539,7 @@ final class StreamingMessageCell: UICollectionViewCell {
 
             bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
             bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
-            bubbleView.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
-            bubbleView.widthAnchor.constraint(
-                lessThanOrEqualTo: contentView.widthAnchor,
-                multiplier: 0.85
-            ),
         ])
-
-        bubbleLeadingConstraint.isActive = true
-        bubbleTrailingConstraint.isActive = true
     }
 
     func configure(with message: ChatViewModel.Message) {
@@ -559,18 +549,23 @@ final class StreamingMessageCell: UICollectionViewCell {
         NSLayoutConstraint.deactivate([
             bubbleLeadingConstraint,
             bubbleTrailingConstraint,
-            bubbleLeadingUserConstraint,
-            bubbleTrailingUserConstraint,
+            bubbleFullWidthLeadingConstraint,
+            bubbleFullWidthTrailingConstraint,
         ])
 
         if isUser {
             bubbleView.backgroundColor = .systemBlue
+            bubbleView.layer.cornerRadius = 18
+            bubbleView.layer.cornerCurve = .continuous
             textLabel.textColor = .white
-            NSLayoutConstraint.activate([bubbleLeadingUserConstraint, bubbleTrailingUserConstraint])
-        } else {
-            bubbleView.backgroundColor = .secondarySystemBackground
-            textLabel.textColor = .label
             NSLayoutConstraint.activate([bubbleLeadingConstraint, bubbleTrailingConstraint])
+        } else {
+            bubbleView.backgroundColor = .clear
+            bubbleView.layer.cornerRadius = 0
+            textLabel.textColor = .label
+            NSLayoutConstraint.activate([
+                bubbleFullWidthLeadingConstraint, bubbleFullWidthTrailingConstraint,
+            ])
         }
 
         textLabel.text = presenter.formatMessageContent(streamingMessage)
@@ -591,9 +586,11 @@ final class StreamingMessageCell: UICollectionViewCell {
         super.prepareForReuse()
         textLabel.text = nil
         textLabel.alpha = 1.0
-        bubbleLeadingConstraint.isActive = false
-        bubbleTrailingConstraint.isActive = false
-        bubbleLeadingUserConstraint.isActive = false
-        bubbleTrailingUserConstraint.isActive = false
+        NSLayoutConstraint.deactivate([
+            bubbleLeadingConstraint,
+            bubbleTrailingConstraint,
+            bubbleFullWidthLeadingConstraint,
+            bubbleFullWidthTrailingConstraint,
+        ])
     }
 }
