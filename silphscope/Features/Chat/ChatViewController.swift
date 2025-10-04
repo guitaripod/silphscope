@@ -247,6 +247,10 @@ final class ChatViewController: UIViewController {
         if isStreaming && !messages.isEmpty {
             updateStreamingMessage(messages)
         } else {
+            let lastIndexPath = IndexPath(item: messages.count - 1, section: 0)
+            if !messages.isEmpty, collectionView.cellForItem(at: lastIndexPath) != nil {
+                return
+            }
             updateSnapshot(with: messages, animated: true)
         }
     }
