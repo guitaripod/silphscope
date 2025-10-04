@@ -96,9 +96,9 @@ final class ChatViewController: UIViewController {
         setupKeyboardObservers()
 
         #if DEBUG
-        textView.text = "Explain love in detail."
-        updateTextViewHeight()
-        updateSendButtonState()
+            textView.text = "Explain love in detail."
+            updateTextViewHeight()
+            updateSendButtonState()
         #endif
     }
 
@@ -188,7 +188,7 @@ final class ChatViewController: UIViewController {
                 guard let self else { return }
 
                 let messages = withObservationTracking {
-                    viewModel.messages
+                    self.viewModel.messages
                 } onChange: {
                     Task { @MainActor [weak self] in
                         self?.observeMessages()
@@ -207,7 +207,7 @@ final class ChatViewController: UIViewController {
                 guard let self else { return }
 
                 let isGenerating = withObservationTracking {
-                    viewModel.isGenerating
+                    self.viewModel.isGenerating
                 } onChange: {
                     Task { @MainActor [weak self] in
                         self?.observeGeneratingState()
@@ -226,7 +226,7 @@ final class ChatViewController: UIViewController {
                 guard let self else { return }
 
                 let error = withObservationTracking {
-                    viewModel.error
+                    self.viewModel.error
                 } onChange: {
                     Task { @MainActor [weak self] in
                         self?.observeErrors()
