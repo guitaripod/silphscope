@@ -1,3 +1,4 @@
+import MarkdownKit
 import StreamingTextKit
 import Swollama
 import UIKit
@@ -496,6 +497,13 @@ final class StreamingMessageCell: UICollectionViewCell {
         return label
     }()
 
+    private let markdownView: MarkdownView = {
+        let view = MarkdownView()
+        view.setupForAutoLayout()
+        view.style = .chat
+        return view
+    }()
+
     private var bubbleLeadingConstraint: NSLayoutConstraint!
     private var bubbleTrailingConstraint: NSLayoutConstraint!
     private var bubbleFullWidthLeadingConstraint: NSLayoutConstraint!
@@ -513,6 +521,7 @@ final class StreamingMessageCell: UICollectionViewCell {
     private func setupUI() {
         contentView.addSubview(bubbleView)
         bubbleView.addSubview(textLabel)
+        bubbleView.addSubview(markdownView)
 
         bubbleLeadingConstraint = bubbleView.leadingAnchor.constraint(
             greaterThanOrEqualTo: contentView.leadingAnchor,
@@ -537,6 +546,11 @@ final class StreamingMessageCell: UICollectionViewCell {
             textLabel.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
             textLabel.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -12),
 
+            markdownView.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 12),
+            markdownView.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
+            markdownView.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
+            markdownView.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -12),
+
             bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
             bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
         ])
@@ -558,27 +572,41 @@ final class StreamingMessageCell: UICollectionViewCell {
             bubbleView.layer.cornerRadius = 18
             bubbleView.layer.cornerCurve = .continuous
             textLabel.textColor = .white
+            textLabel.isHidden = false
+            markdownView.isHidden = true
             NSLayoutConstraint.activate([bubbleLeadingConstraint, bubbleTrailingConstraint])
+            textLabel.text = presenter.formatMessageContent(streamingMessage)
+            textLabel.alpha = presenter.shouldShowAsThinking(streamingMessage) ? 0.6 : 1.0
         } else {
             bubbleView.backgroundColor = .clear
             bubbleView.layer.cornerRadius = 0
-            textLabel.textColor = .label
+            textLabel.isHidden = true
+            markdownView.isHidden = false
             NSLayoutConstraint.activate([
                 bubbleFullWidthLeadingConstraint, bubbleFullWidthTrailingConstraint,
             ])
+            markdownView.markdown = presenter.formatMessageContent(streamingMessage)
+            markdownView.alpha = presenter.shouldShowAsThinking(streamingMessage) ? 0.6 : 1.0
         }
-
-        textLabel.text = presenter.formatMessageContent(streamingMessage)
-        textLabel.alpha = presenter.shouldShowAsThinking(streamingMessage) ? 0.6 : 1.0
     }
 
     func updateContent(_ message: ChatViewModel.Message) {
         let streamingMessage = message.asStreamingTextMessage
         let newText = presenter.formatMessageContent(streamingMessage)
-        if textLabel.text != newText {
-            textLabel.text = newText
-            textLabel.alpha = presenter.shouldShowAsThinking(streamingMessage) ? 0.6 : 1.0
-            contentView.setNeedsLayout()
+        let isUser = message.role == .user
+
+        if isUser {
+            if textLabel.text != newText {
+                textLabel.text = newText
+                textLabel.alpha = presenter.shouldShowAsThinking(streamingMessage) ? 0.6 : 1.0
+                contentView.setNeedsLayout()
+            }
+        } else {
+            if markdownView.markdown != newText {
+                markdownView.markdown = newText
+                markdownView.alpha = presenter.shouldShowAsThinking(streamingMessage) ? 0.6 : 1.0
+                contentView.setNeedsLayout()
+            }
         }
     }
 
@@ -586,6 +614,8 @@ final class StreamingMessageCell: UICollectionViewCell {
         super.prepareForReuse()
         textLabel.text = nil
         textLabel.alpha = 1.0
+        markdownView.markdown = nil
+        markdownView.alpha = 1.0
         NSLayoutConstraint.deactivate([
             bubbleLeadingConstraint,
             bubbleTrailingConstraint,
