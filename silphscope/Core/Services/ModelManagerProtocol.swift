@@ -1,6 +1,7 @@
 import Foundation
 import Swollama
 
+@MainActor
 protocol ModelManagerProtocol {
     var availableModels: [ModelListEntry] { get }
     var selectedModel: OllamaModelName? { get }

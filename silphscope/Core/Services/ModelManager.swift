@@ -3,7 +3,11 @@ import Swollama
 
 final class ModelManager: ModelManagerProtocol {
 
-    static let shared: ModelManagerProtocol = ModelManager()
+    nonisolated(unsafe) static let shared: ModelManagerProtocol = {
+        MainActor.assumeIsolated {
+            ModelManager(llmService: OllamaService.shared)
+        }
+    }()
 
     private(set) var availableModels: [ModelListEntry] = []
     private(set) var selectedModel: OllamaModelName?
@@ -12,7 +16,7 @@ final class ModelManager: ModelManagerProtocol {
 
     private let llmService: LLMServiceProtocol
 
-    private init(llmService: LLMServiceProtocol = OllamaService.shared) {
+    private init(llmService: LLMServiceProtocol) {
         self.llmService = llmService
     }
     @MainActor
