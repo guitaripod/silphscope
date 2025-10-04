@@ -94,6 +94,12 @@ final class ChatViewController: UIViewController {
         observeViewModel()
         setupNavigationBar()
         setupKeyboardObservers()
+
+        #if DEBUG
+        textView.text = "Explain love in detail."
+        updateTextViewHeight()
+        updateSendButtonState()
+        #endif
     }
 
     override func viewDidAppear(_ animated: Bool) {
