@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 public protocol StreamingTextDelegate: AnyObject {
     func streamingHandler(_ handler: StreamingTextHandler, didUpdateContent content: String)
     func streamingHandler(_ handler: StreamingTextHandler, didCompleteWithContent content: String)
