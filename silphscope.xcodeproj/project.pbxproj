@@ -10,6 +10,8 @@
 		2C50746F2E8DD6B4003CD8A5 /* Swollama in Frameworks */ = {isa = PBXBuildFile; productRef = 2C50746E2E8DD6B4003CD8A5 /* Swollama */; };
 		2CC3C1892E8DD934004E9679 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 2CC3C1882E8DD934004E9679 /* GRDB */; };
 		2CC3C1C32E907121004E9679 /* StreamingTextKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2CC3C1C22E907121004E9679 /* StreamingTextKit */; };
+		2CC3C1C62E916509004E9679 /* MarkdownKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2CC3C1C52E916509004E9679 /* MarkdownKit */; };
+		2CC3C1C92E9165A8004E9679 /* MarkdownKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2CC3C1C82E9165A8004E9679 /* MarkdownKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,7 +45,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				2CC3C1C32E907121004E9679 /* StreamingTextKit in Frameworks */,
+				2CC3C1C92E9165A8004E9679 /* MarkdownKit in Frameworks */,
 				2C50746F2E8DD6B4003CD8A5 /* Swollama in Frameworks */,
+				2CC3C1C62E916509004E9679 /* MarkdownKit in Frameworks */,
 				2CC3C1892E8DD934004E9679 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -90,6 +94,8 @@
 				2C50746E2E8DD6B4003CD8A5 /* Swollama */,
 				2CC3C1882E8DD934004E9679 /* GRDB */,
 				2CC3C1C22E907121004E9679 /* StreamingTextKit */,
+				2CC3C1C52E916509004E9679 /* MarkdownKit */,
+				2CC3C1C82E9165A8004E9679 /* MarkdownKit */,
 			);
 			productName = silphscope;
 			productReference = 2C5074432E8DD159003CD8A5 /* silphscope.app */;
@@ -123,6 +129,7 @@
 				2C50746D2E8DD6B4003CD8A5 /* XCLocalSwiftPackageReference "../../swift/Swollama" */,
 				2CC3C1872E8DD934004E9679 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 				2CC3C1C12E907121004E9679 /* XCLocalSwiftPackageReference "StreamingTextKit" */,
+				2CC3C1C72E9165A8004E9679 /* XCLocalSwiftPackageReference "MarkdownKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2C5074442E8DD159003CD8A5 /* Products */;
@@ -370,6 +377,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = StreamingTextKit;
 		};
+		2CC3C1C72E9165A8004E9679 /* XCLocalSwiftPackageReference "MarkdownKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = MarkdownKit;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -396,6 +407,14 @@
 		2CC3C1C22E907121004E9679 /* StreamingTextKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = StreamingTextKit;
+		};
+		2CC3C1C52E916509004E9679 /* MarkdownKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MarkdownKit;
+		};
+		2CC3C1C82E9165A8004E9679 /* MarkdownKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MarkdownKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
